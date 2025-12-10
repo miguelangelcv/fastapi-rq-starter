@@ -16,7 +16,7 @@ docker compose up --build -d
 
 - API: <http://localhost:8000> (docs en `/docs`)
 - rq-dashboard: <http://localhost:9181>
-- Redis: puerto 6379
+- Redis: puerto 6379 (datos persistentes en volumen `redis_data`)
 - Workers: `default` y `high`
 
 ## Desarrollo local (Windows)
@@ -90,11 +90,17 @@ docker compose up --build -d
 
 - **`POST /tasks/a`** → Demo `task_a` (procesar usuario)
 
-   Body: `{"user_id": 123, "high": false}`
+   Body:
+   ```json
+   {"user_id": 123, "duration": 5, "high": false}
+   ```
 
 - **`POST /tasks/b`** → Demo `task_b` (notificaciones)
 
-   Body: `{"user_id": 456, "high": true}`
+   Body:
+   ```json
+   {"user_id": 456, "duration": 5, "high": true}
+   ```
 
 - **`GET /tasks/{job_id}`** → Estado, resultado y progreso
 - **`DELETE /tasks/{job_id}`** → Cancelación cooperativa
@@ -142,7 +148,7 @@ El sistema evita ejecutar tareas duplicadas usando una clave única generada a p
 
 ## Variables de entorno
 
-Configurables en `.env` o docker-compose:
+Configurables en `.env` o docker-compose (ver volumen `redis_data` para persistencia de Redis):
 
 ```dotenv
 REDIS_URL=redis://localhost:6379/0
