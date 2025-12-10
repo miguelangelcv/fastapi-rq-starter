@@ -1,0 +1,8 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+redis>=5.0
+rq>=1.16
+rq-dashboard>=0.6
+pydantic>=2.0
+python-dotenv>=1.0
+pydantic-settings>=2.0

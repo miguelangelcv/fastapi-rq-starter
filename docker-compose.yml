@@ -1,0 +1,47 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+
+  api:
+    build: .
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    depends_on:
+      - redis
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  worker_default:
+    build: .
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    command: ["rq", "worker", "default"]
+    restart: unless-stopped
+
+  worker_high:
+    build: .
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    command: ["rq", "worker", "high"]
+    restart: unless-stopped
+    
+  rq_dashboard:
+    image: eoranged/rq-dashboard:latest
+    environment:
+      - RQ_DASHBOARD_REDIS_URL=redis://redis:6379/0
+    ports:
+      - "9181:9181"
+    depends_on:
+      - redis
+    restart: unless-stopped

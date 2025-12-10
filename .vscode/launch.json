@@ -1,0 +1,66 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "API: Uvicorn (debug)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "api:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
+                "--reload",
+                "--log-level",
+                "debug"
+            ],
+            "cwd": "${workspaceFolder}/src",
+            "jinja": true,
+            "justMyCode": false,
+            "env": {
+                "REDIS_URL": "redis://localhost:6379/0"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Worker: RQ (Windows SimpleWorker)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "rq",
+            "args": [
+                "worker",
+                "default",
+                "high",
+                "--worker-class",
+                "rq.worker.SimpleWorker"
+            ],
+            "cwd": "${workspaceFolder}/src",
+            "jinja": false,
+            "justMyCode": false,
+            "env": {
+                "REDIS_URL": "redis://localhost:6379/0"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Worker: RQ (Linux/Mac)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "rq",
+            "args": [
+                "worker",
+                "default",
+                "high"
+            ],
+            "cwd": "${workspaceFolder}/src",
+            "jinja": false,
+            "justMyCode": false,
+            "env": {
+                "REDIS_URL": "redis://localhost:6379/0"
+            },
+            "console": "integratedTerminal"
+        }
+    ]
+}
