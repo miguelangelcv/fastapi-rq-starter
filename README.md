@@ -144,13 +144,24 @@ El sistema evita ejecutar tareas duplicadas usando una clave única generada a p
 
 Configurables en `.env` o docker-compose:
 
-- `REDIS_URL`: URL de conexión a Redis (default: `redis://localhost:6379/0`)
-- `API_HOST`: Host de la API (default: `0.0.0.0`)
-- `API_PORT`: Puerto de la API (default: `8000`)
-- `TASK_TIMEOUT`: Timeout máximo de tareas en segundos (default: `600`)
-- `RESULT_TTL`: Tiempo de retención de resultados exitosos (default: `3600`)
-- `FAILURE_TTL`: Tiempo de retención de tareas fallidas (default: `86400`)
-- `IDEMP_MARGIN`: Margen adicional para el TTL de idempotencia (default: `300`)
+```dotenv
+REDIS_URL=redis://localhost:6379/0
+API_HOST=0.0.0.0
+API_PORT=8000
+RESULT_TTL=3600
+FAILURE_TTL=86400
+TASK_TIMEOUT=600
+IDEMP_MARGIN=300
+```
+
+Descripción rápida:
+- `REDIS_URL`: URL de conexión a Redis
+- `API_HOST`: Host de la API
+- `API_PORT`: Puerto de la API
+- `RESULT_TTL`: Tiempo de retención de resultados exitosos
+- `FAILURE_TTL`: Tiempo de retención de tareas fallidas
+- `TASK_TIMEOUT`: Timeout máximo de tareas en segundos
+- `IDEMP_MARGIN`: Margen adicional para el TTL de idempotencia
 
 ## Producción: recomendaciones
 
