@@ -39,15 +39,17 @@ class CreateTaskBody(BaseModel):
 
 
 class TaskBody(BaseModel):
-    """Modelo para tareas que requieren un user_id.
+    """Modelo para tareas que requieren un user_id y duración.
     
     Usado por task_a y task_b.
     
     Attributes:
         user_id: ID del usuario a procesar
+        duration: Duración en segundos de la tarea
         high: Si True, usa cola de alta prioridad
     """
     user_id: int
+    duration: int
     high: bool = False
 #endregion MODELOS PYDANTIC
 
@@ -184,23 +186,23 @@ def create_task_a(body: TaskBody) -> dict:
     """Crear y encolar task_a para procesar un usuario.
     
     Tarea de ejemplo que simula procesamiento de datos de usuario.
-    Dura aproximadamente 5 segundos.
+    Dura el tiempo indicado en 'duration'.
     
     Args:
-        body: Parámetros con user_id y prioridad
+        body: Parámetros con user_id, duration y prioridad
     
     Returns:
         Dict con job_id, queue y task name
     
     Example:
         POST /tasks/a
-        {"user_id": 123, "high": false}
+        {"user_id": 123, "duration": 5, "high": false}
     """
     return _enqueue_task(
         task_name="task_a",
         task_func=worker_tasks.task_a,
-        task_args=(body.user_id,),
-        idem_payload={"user_id": body.user_id},
+        task_args=(body.user_id, body.duration),
+        idem_payload={"user_id": body.user_id, "duration": body.duration},
         high=body.high
     )
 
@@ -210,23 +212,23 @@ def create_task_b(body: TaskBody) -> dict:
     """Crear y encolar task_b para procesar un usuario.
     
     Tarea de ejemplo que simula envío de notificaciones.
-    Dura aproximadamente 5 segundos.
+    Dura el tiempo indicado en 'duration'.
     
     Args:
-        body: Parámetros con user_id y prioridad
+        body: Parámetros con user_id, duration y prioridad
     
     Returns:
         Dict con job_id, queue y task name
     
     Example:
         POST /tasks/b
-        {"user_id": 456, "high": true}
+        {"user_id": 456, "duration": 5, "high": true}
     """
     return _enqueue_task(
         task_name="task_b",
         task_func=worker_tasks.task_b,
-        task_args=(body.user_id,),
-        idem_payload={"user_id": body.user_id},
+        task_args=(body.user_id, body.duration),
+        idem_payload={"user_id": body.user_id, "duration": body.duration},
         high=body.high
     )
 

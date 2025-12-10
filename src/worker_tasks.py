@@ -68,14 +68,15 @@ def long_task(duration: int, task_name: str, idem_key: str) -> str:
     return f"done:{task_name}"
 
 
-def task_a(user_id: int, idem_key: str) -> dict:
+def task_a(user_id: int, duration: int, idem_key: str) -> dict:
     """Tarea A de ejemplo - Procesar datos de usuario.
     
     Simula procesamiento de datos de un usuario. Tarea de demostración
-    que dura 5 segundos.
+    que dura 'duration' segundos.
     
     Args:
         user_id: ID del usuario a procesar
+        duration: Duración total en segundos
         idem_key: Clave de idempotencia en Redis a liberar al terminar
     
     Returns:
@@ -103,8 +104,8 @@ def task_a(user_id: int, idem_key: str) -> dict:
         }
         job.save_meta()
         
-        # Simular trabajo (5 segundos)
-        time.sleep(5)
+        # Simular trabajo ('duration' segundos)
+        time.sleep(duration)
         
         # Preparar resultado
         result = {
@@ -126,18 +127,19 @@ def task_a(user_id: int, idem_key: str) -> dict:
         redis_conn.delete(idem_key)
 
 
-def task_b(user_id: int, idem_key: str) -> dict:
-    """Tarea B de ejemplo - Enviar notificaciones.
+def task_b(user_id: int, duration: int, idem_key: str) -> dict:
+    """Tarea B de ejemplo - Procesar datos de usuario.
     
-    Simula envío de notificaciones a un usuario. Tarea de demostración
-    que dura 5 segundos.
+    Simula procesamiento de datos de un usuario. Tarea de demostración
+    que dura 'duration' segundos.
     
     Args:
-        user_id: ID del usuario destinatario
+        user_id: ID del usuario a procesar
+        duration: Duración total en segundos
         idem_key: Clave de idempotencia en Redis a liberar al terminar
     
     Returns:
-        Dict con información del envío:
+        Dict con información del procesamiento:
         {"type": "task_b", "user_id": int, "completed": bool}
     
     Raises:
@@ -161,8 +163,8 @@ def task_b(user_id: int, idem_key: str) -> dict:
         }
         job.save_meta()
         
-        # Simular trabajo (5 segundos)
-        time.sleep(5)
+        # Simular trabajo ('duration' segundos)
+        time.sleep(duration)
         
         # Preparar resultado
         result = {
