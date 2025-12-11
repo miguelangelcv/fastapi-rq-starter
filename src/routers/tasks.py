@@ -16,7 +16,7 @@ from rq import Retry
 from rq.job import Job
 
 from settings import settings
-from utils import make_idem_key, redis_conn, q_default, q_high
+from utils import make_idem_key, redis_conn, q_default, q_high, enqueue_task
 import worker_tasks
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -53,83 +53,6 @@ class TaskBody(BaseModel):
     high: bool = False
 #endregion MODELOS PYDANTIC
 
-
-#region FUNCIONES HELPER
-def _enqueue_task(
-    task_name: str, 
-    task_func, 
-    task_args: tuple, 
-    idem_payload: dict, 
-    high: bool = False, 
-    ttl_extra: int = 10
-) -> dict:
-    """Encola una tarea en RQ con idempotencia automática.
-    
-    Esta función centraliza la lógica de encolado para evitar duplicación de código.
-    Verifica si ya existe una tarea idéntica en cola/ejecución antes de crear una nueva.
-    
-    Args:
-        task_name: Nombre identificador de la tarea
-        task_func: Función del worker a ejecutar
-        task_args: Tupla con los argumentos para task_func (sin incluir idem_key)
-        idem_payload: Diccionario con datos para generar clave de idempotencia
-        high: Si True, encola en cola 'high' (prioridad alta)
-        ttl_extra: Segundos adicionales para el TTL de la clave de idempotencia
-    
-    Returns:
-        Dict con:
-        - duplicate: True si la tarea ya existía
-        - job_id: ID del job (nuevo o existente)
-        - queue: Nombre de la cola (si es nuevo)
-        - task: Nombre de la tarea (si es nuevo)
-    
-    Example:
-        >>> _enqueue_task(
-        ...     task_name="task_a",
-        ...     task_func=worker_tasks.task_a,
-        ...     task_args=(123,),
-        ...     idem_payload={"user_id": 123},
-        ...     high=False
-        ... )
-        {"job_id": "uuid", "queue": "default", "task": "task_a"}
-    """
-    # Generar clave de idempotencia
-    idem_key = make_idem_key(task_name, idem_payload, 0)
-    ttl = ttl_extra + settings.IDEMP_MARGIN
-    
-    # Verificar si ya existe una tarea idéntica
-    existing = redis_conn.get(idem_key)
-    if existing:
-        job_id = existing.decode() if isinstance(existing, bytes) else str(existing)
-        try:
-            job = Job.fetch(str(job_id), connection=redis_conn)
-            status = job.get_status()
-            if status in ("finished", "failed", "canceled", "cancelled"):
-                pass  # Permitir encolar nueva tarea
-            else:
-                return {"duplicate": True, "job_id": job_id}
-        except Exception:
-            pass
-    
-    # Seleccionar cola según prioridad
-    q = q_high if high else q_default
-
-    # Encolar tarea con configuración
-    job = q.enqueue(
-        task_func,
-        *task_args,
-        idem_key,
-        job_timeout=settings.TASK_TIMEOUT,
-        result_ttl=settings.RESULT_TTL,
-        failure_ttl=settings.FAILURE_TTL,
-    )
-    
-    # Guardar job_id en Redis con TTL para idempotencia
-    redis_conn.setex(idem_key, ttl, job.id)
-    
-    return {"job_id": job.id, "queue": q.name, "task": task_name}
-#endregion FUNCIONES HELPER
-
 #region ENDPOINTS
 @router.post("/")
 def create_task(body: CreateTaskBody) -> dict:
@@ -162,31 +85,13 @@ def create_task(body: CreateTaskBody) -> dict:
     if body.task_name != "long_task":
         raise HTTPException(400, "task_name desconocido (usa 'long_task')")
 
-    # Generar clave única y verificar duplicados
-    idem_key = make_idem_key(body.task_name, body.payload, body.duration)
-    ttl = body.duration + settings.IDEMP_MARGIN
-    
-    existing = redis_conn.get(idem_key)
-    if existing:
-        job_id = existing.decode() if isinstance(existing, bytes) else existing
-        return {"duplicate": True, "job_id": job_id}
-
-    # Encolar tarea con retry
-    q = q_high if body.high else q_default
-    job = q.enqueue(
-        worker_tasks.long_task,
-        body.duration,
-        body.task_name,
-        idem_key,
-        retry=Retry(max=3, interval=[10, 30, 60]),
-        job_timeout=settings.TASK_TIMEOUT,
-        result_ttl=settings.RESULT_TTL,
-        failure_ttl=settings.FAILURE_TTL,
+    return enqueue_task(
+        task_name=body.task_name,
+        task_func=worker_tasks.long_task,
+        task_args=(body.duration, body.task_name),
+        idem_payload=body.payload,
+        high=body.high
     )
-    
-    # Guardar en Redis para idempotencia
-    redis_conn.setex(idem_key, ttl, job.id)
-    return {"job_id": job.id, "queue": q.name}
 
 
 @router.post("/a")
@@ -206,7 +111,7 @@ def create_task_a(body: TaskBody) -> dict:
         POST /tasks/a
         {"user_id": 123, "duration": 5, "high": false}
     """
-    return _enqueue_task(
+    return enqueue_task(
         task_name="task_a",
         task_func=worker_tasks.task_a,
         task_args=(body.user_id, body.duration),
@@ -232,7 +137,7 @@ def create_task_b(body: TaskBody) -> dict:
         POST /tasks/b
         {"user_id": 456, "duration": 5, "high": true}
     """
-    return _enqueue_task(
+    return enqueue_task(
         task_name="task_b",
         task_func=worker_tasks.task_b,
         task_args=(body.user_id, body.duration),
