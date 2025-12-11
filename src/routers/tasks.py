@@ -100,12 +100,20 @@ def _enqueue_task(
     # Verificar si ya existe una tarea idéntica
     existing = redis_conn.get(idem_key)
     if existing:
-        job_id = existing.decode() if isinstance(existing, bytes) else existing
-        return {"duplicate": True, "job_id": job_id}
+        job_id = existing.decode() if isinstance(existing, bytes) else str(existing)
+        try:
+            job = Job.fetch(str(job_id), connection=redis_conn)
+            status = job.get_status()
+            if status in ("finished", "failed", "canceled", "cancelled"):
+                pass  # Permitir encolar nueva tarea
+            else:
+                return {"duplicate": True, "job_id": job_id}
+        except Exception:
+            pass
     
     # Seleccionar cola según prioridad
     q = q_high if high else q_default
-    
+
     # Encolar tarea con configuración
     job = q.enqueue(
         task_func,
@@ -240,7 +248,6 @@ def get_task(job_id: str) -> dict:
     Retorna información completa del job incluyendo:
     - Estado actual (queued, started, finished, failed, cancelled)
     - Resultado (si completó)
-    - Metadatos (progreso, información adicional)
     - Timestamps de encolado, inicio y fin
     
     Args:
@@ -260,7 +267,6 @@ def get_task(job_id: str) -> dict:
             "id": "550e8400-e29b-41d4-a716-446655440000",
             "status": "finished",
             "result": {"type": "task_a", "completed": true},
-            "meta": {"status": "done"},
             "enqueued_at": "2025-12-10T18:30:00Z",
             "started_at": "2025-12-10T18:30:05Z",
             "ended_at": "2025-12-10T18:30:10Z"
@@ -275,7 +281,6 @@ def get_task(job_id: str) -> dict:
         "id": job.id,
         "status": job.get_status(),
         "result": job.result,
-        "meta": job.meta,
         "enqueued_at": job.enqueued_at,
         "started_at": job.started_at,
         "ended_at": job.ended_at,
