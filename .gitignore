@@ -36,3 +36,6 @@ htmlcov/
 
 # IDE
 .idea/
+
+# Temporary files
+temp/
